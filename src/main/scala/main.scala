@@ -8,16 +8,16 @@ import org.parboiled2.ParseError
 
 case class MetaInfo(
   anounce: List[String],
-  info: Option[BDict]
+  info: Option[String]
 )
 
 object Test {
   def main(args: Array[String]) = {
     val byteArray = Files.readAllBytes(Paths.get("/home/fran/github/aktorrent/kat.torrent"))
-    val parser = new Bencodingg(byteArray)
+    val parser = new Bencodingg("0:")
     val a = parser.InputLine.run()
     a match {
-      case Success(x) => println(x)
+      case Success(x) => println("success")
       case Failure(z) => println(parser.formatError(z.asInstanceOf[ParseError]))
     }
   }

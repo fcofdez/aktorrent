@@ -11,7 +11,7 @@ class Bencodingg(val input: ParserInput) extends Parser {
 
   def root = rule { zeroOrMore(str | int | list | dict) }
 
-  def str: Rule1[String] = rule { Number ~ ':' ~> ((length: Long) => run(fieldEnd = cursor + length.toInt)) ~ capture(oneOrMore(test(cursor < fieldEnd) ~ ANY))}
+  def str: Rule1[String] = rule { '0' ~ ':' ~ push("") | (Number ~ ':' ~> ((length: Long) => run(fieldEnd = cursor + length.toInt)) ~ capture(oneOrMore(test(cursor < fieldEnd) ~ ANY))) }
 
   def int: Rule1[Long] = rule { 'i' ~ integer ~ 'e' }
 
