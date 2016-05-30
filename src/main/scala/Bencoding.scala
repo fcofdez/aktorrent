@@ -1,8 +1,33 @@
 package aktorrent
 
 import org.parboiled2._
+import scala.language.higherKinds
 
-class Bencoding(val input: ParserInput) extends Parser {
+object BencodedTypes {
+
+  sealed abstract class BencodedType {
+    def serialize: String
+    def content: Any
+  }
+
+  case class BencodedString(content: String) extends BencodedType {
+    def serialize = s"${content.length}:$content"
+  }
+
+  case class BencodedLong(content: Int) extends BencodedType {
+    def serialize = s"i${content}e"
+  }
+
+  case class BencodedList[T <: BencodedType](content: Vector[T]) extends BencodedType {
+
+
+  }
+
+  // type BencodedList[T <: BencodedType] = Vector[T]
+  // type BencodedDict[BencodedString, T <: BencodedType] = Map[BencodedString, T]
+}
+
+class BencodingParser(val input: ParserInput) extends Parser {
   private var fieldEnd: Int = _
 
   def InputLine = rule { root ~ EOI }
@@ -24,4 +49,9 @@ class Bencoding(val input: ParserInput) extends Parser {
   def Number = rule { capture(Digits) ~> (_.toLong) }
 
   def Digits = rule { oneOrMore(CharPredicate.Digit) }
+}
+
+object BencodingSerializer {
+  import BencodedTypes._
+
 }

@@ -1,30 +1,17 @@
 package aktorrent
 
-import java.io.ByteArrayInputStream
+import scala.util.{Success, Failure}
+
 import org.parboiled2.ParseError
-import org.scalatest.WordSpec
 import org.scalacheck._
 import org.scalacheck.Arbitrary.arbitrary
 import org.scalacheck.Gen._
 import org.scalacheck.Prop.forAll
-import org.scalacheck._
-import scala.util.Failure
-import scala.util.Success
-
-sealed abstract class BencodedType {
-  def serialize: String
-  def content: Any
-}
-
-case class BencodedString(content: String) extends BencodedType {
-  def serialize = s"${content.length}:$content"
-}
-
-case class BencodedLong(content: Int) extends BencodedType {
-  def serialize = s"i${content}e"
-}
 
 object BencodeSpec extends Properties("Bencoded") {
+
+  import BencodedTypes._
+
   def serialize(list: List[BencodedType]): String = {
     s"l${list.map(_.serialize).mkString}e"
   }
@@ -66,36 +53,33 @@ object BencodeSpec extends Properties("Bencoded") {
   implicit val arbDict: Arbitrary[List[(BencodedString, BencodedType)]] = Arbitrary(genDictList)
 
   property("strings") = forAll { (str: BencodedString) =>
-    val parsedInput = new Bencoding(str.serialize).InputLine.run().get.asInstanceOf[Vector[String]]
+    val parsedInput = new BencodingParser(str.serialize).InputLine.run().get.asInstanceOf[Vector[String]]
     parsedInput == Vector(str.content)
   }
 
   property("dictProperties") = forAll { (l: List[(BencodedString, BencodedType)]) =>
-    val parser = new Bencoding(serialize(l.toMap))
+    val parser = new BencodingParser(serialize(l.toMap))
     parser.InputLine.run() match {
       case Success(e) =>
         val input = l.map((a: Tuple2[BencodedString, BencodedType]) => (a._1.content, a._2.content)).toMap
         input == e.asInstanceOf[Vector[Any]].head
       case Failure(error) =>
-        1 == 2
+        throw new Exception("Invalid input")
     }
   }
 
   property("list") = forAll { (l: List[BencodedType]) =>
-    val parser = new Bencoding(serialize(l))
+    val parser = new BencodingParser(serialize(l))
     parser.InputLine.run() match {
       case Success(e) =>
         l.map(_.content) == e.toList.head
-      case Failure(error: ParseError) =>
-        println(parser.formatError(error))
-        1 == 1
       case Failure(error) =>
-        1 == 2
+        throw new Exception("Invalid input")
     }
   }
 
   property("longs") = forAll { (l: BencodedLong) =>
-    val parsedInput = new Bencoding(l.serialize).InputLine.run().get.asInstanceOf[Vector[Int]]
+    val parsedInput = new BencodingParser(l.serialize).InputLine.run().get.asInstanceOf[Vector[Int]]
     parsedInput == Vector(l.content)
   }
 }
