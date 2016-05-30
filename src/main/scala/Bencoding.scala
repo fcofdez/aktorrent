@@ -1,10 +1,8 @@
 package aktorrent
 
 import org.parboiled2._
-import shapeless.HNil
-import shapeless.::
 
-class Bencodingg(val input: ParserInput) extends Parser {
+class Bencoding(val input: ParserInput) extends Parser {
   private var fieldEnd: Int = _
 
   def InputLine = rule { root ~ EOI }
