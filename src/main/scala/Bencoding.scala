@@ -18,13 +18,6 @@ object BencodedTypes {
     def serialize = s"i${content}e"
   }
 
-  case class BencodedList[T <: BencodedType](content: Vector[T]) extends BencodedType {
-
-
-  }
-
-  // type BencodedList[T <: BencodedType] = Vector[T]
-  // type BencodedDict[BencodedString, T <: BencodedType] = Map[BencodedString, T]
 }
 
 class BencodingParser(val input: ParserInput) extends Parser {
