@@ -10,76 +10,81 @@ import org.scalacheck.Prop.forAll
 
 object BencodeSpec extends Properties("Bencoded") {
 
-  import BencodedTypes._
+  import BencodedType._
 
-  def serialize(list: List[BencodedType]): String = {
-    s"l${list.map(_.serialize).mkString}e"
+  def serialize(list: List[BType]): String = {
+    s"l${list.map(_.toString).mkString}e"
   }
 
-  def serialize(dict: Map[BencodedString, BencodedType]): String = {
-    s"d${dict.map(t => s"${t._1.serialize}${t._2.serialize}").mkString}e"
+  def serialize(dict: Map[BString, BType]): String = {
+    s"d${dict.map(t => s"${t._1.toString}${t._2.toString}").mkString}e"
   }
 
   val genString = for {
     s <- Gen.alphaStr
-  } yield BencodedString(s)
+  } yield BString(s)
 
 
-  val genTuple: Gen[(BencodedString, BencodedType)] = for {
+  val genTuple: Gen[(BString, BType)] = for {
     key <- Gen.alphaStr suchThat (_.length > 0)
     value <-  genLong
-  } yield (BencodedString(key), value)
+  } yield (BString(key), value)
 
   val genLong = for {
     l <- arbitrary[Int]
-  } yield BencodedLong(l)
+  } yield BNumber(l)
 
   def genList[T](genElem: Gen[T]): Gen[List[T]] = {
-    sized { sz: Int =>
-      for {
-        listSize <- Gen.choose(1, sz)
-        list <- Gen.listOfN(listSize, genElem)
-      } yield list
-    }
+    Gen.nonEmptyListOf(genElem)
   }
 
   implicit val genDictList = genList(genTuple)
-  implicit val genList: Gen[List[BencodedType]] = Gen.containerOf[List, BencodedType](oneOf(genString, genLong))
+  implicit val genList: Gen[List[BType]] = Gen.containerOf[List, BType](oneOf(genString, genLong))
 
-  implicit val arbLong: Arbitrary[BencodedLong] = Arbitrary(genLong)
-  implicit val arbString: Arbitrary[BencodedString] = Arbitrary(genString)
-  implicit val arbTuple: Arbitrary[(BencodedString, BencodedType)] = Arbitrary(genTuple)
-  implicit val arbList: Arbitrary[List[BencodedType]] = Arbitrary(genList)
-  implicit val arbDict: Arbitrary[List[(BencodedString, BencodedType)]] = Arbitrary(genDictList)
+  implicit val arbLong: Arbitrary[BNumber] = Arbitrary(genLong)
+  implicit val arbString: Arbitrary[BString] = Arbitrary(genString)
+  implicit val arbTuple: Arbitrary[(BString, BType)] = Arbitrary(genTuple)
+  implicit val arbList: Arbitrary[List[BType]] = Arbitrary(genList)
+  implicit val arbDict: Arbitrary[List[(BString, BType)]] = Arbitrary(genDictList)
 
-  property("strings") = forAll { (str: BencodedString) =>
-    val parsedInput = new BencodingParser(str.serialize).InputLine.run().get.asInstanceOf[Vector[String]]
-    parsedInput == Vector(str.content)
+  property("strings") = forAll { (str: BString) =>
+    val parsedInput = new BencodingParser(str.toString).InputLine.run().get.asInstanceOf[Vector[BString]]
+    parsedInput == Vector(str)
   }
 
-  property("dictProperties") = forAll { (l: List[(BencodedString, BencodedType)]) =>
+  property("dictProperties") = forAll { (l: List[(BString, BType)]) =>
     val parser = new BencodingParser(serialize(l.toMap))
+    val inputMap = l.map((a: Tuple2[BString, BType]) => (a._1.s, a._2)).toMap
     parser.InputLine.run() match {
-      case Success(e) =>
-        val input = l.map((a: Tuple2[BencodedString, BencodedType]) => (a._1.content, a._2.content)).toMap
-        input == e.asInstanceOf[Vector[Any]].head
+      case Success(vector) =>
+        vector(0) match { // We expect only 1 dictionary
+          case BDict(map) =>
+            map == inputMap
+          case _ =>
+            throw new Exception(s"Invalid input")
+        }
       case Failure(error) =>
-        throw new Exception("Invalid input")
+        throw new Exception(s"Invalid input ${error}")
     }
   }
 
-  property("list") = forAll { (l: List[BencodedType]) =>
+  property("list") = forAll { (l: List[BType]) =>
     val parser = new BencodingParser(serialize(l))
     parser.InputLine.run() match {
       case Success(e) =>
-        l.map(_.content) == e.toList.head
+        e(0) match {
+          case BArray(seq) =>
+            l == seq
+          case _ =>
+            throw new Exception("Invalid input")
+        }
       case Failure(error) =>
         throw new Exception("Invalid input")
     }
   }
 
-  property("longs") = forAll { (l: BencodedLong) =>
-    val parsedInput = new BencodingParser(l.serialize).InputLine.run().get.asInstanceOf[Vector[Int]]
-    parsedInput == Vector(l.content)
+  property("longs") = forAll { (l: BNumber) =>
+    val parsedInput = new BencodingParser(l.toString).InputLine.run().get.asInstanceOf[Vector[BNumber]]
+    parsedInput == Vector(l)
   }
 }
