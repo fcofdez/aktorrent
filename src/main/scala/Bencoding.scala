@@ -1,5 +1,8 @@
 package aktorrent
 
+import scala.language.higherKinds
+import scala.collection.generic.CanBuildFrom
+import scala.collection.GenTraversable
 import scala.util.Try
 
 import BencodedType._
@@ -12,6 +15,7 @@ final object BencodedType {
 
   sealed abstract class BType extends Product with Serializable {
     def asBDict: BDict = throw new Exception("Invalid")
+    def :+(other: BType): BType = throw new Exception("Invalid")
   }
 
   final case class BNumber(value: Long) extends BType {
@@ -27,7 +31,14 @@ final object BencodedType {
   final case class BArray(a: Seq[BType]) extends BType
   final case class BDict(fields: Map[String, BType] = Map()) extends BType {
     override def asBDict: BDict = this
-    def get(key: String): Option[BType] = fields.get(key)
+    override def :+(other: BType): BType = {
+      other match {
+        case d: BDict =>
+          BDict(fields ++ d.fields)
+        case _ =>
+          this
+      }
+    }
   }
 
   case class DeserializationException(msg: String, cause: Throwable = null) extends RuntimeException(msg, cause)
@@ -35,7 +46,7 @@ final object BencodedType {
 
   trait BFormat[I] {
     def decode(input: BType): I
-    // def encode(input: I): BType
+    def encode(input: I): BType
   }
 
   implicit object hNilFormat extends BFormat[HNil] {
@@ -90,6 +101,25 @@ final object BencodedType {
     }
   }
 
+  implicit def genTraversableFormat[T[_], E](
+    implicit
+      evidence: T[E] <:< GenTraversable[E], // both of kind *->*
+    cbf: CanBuildFrom[T[E], E, T[E]],
+    ef: BFormat[E]
+  ): BFormat[T[E]] = new BFormat[T[E]] {
+    def decode(value: BType) = {
+      value match {
+        case BArray(ar) =>
+          ar.map(ef.decode).asInstanceOf[T[E]] // To make the compiler happy
+        case x => deserializationError("Expected GenTraversable[E] as BArray, but got " + x)
+      }
+    }
+
+    def encode(x: T[E]) = {
+      BArray(x.map(ef.encode).asInstanceOf[Seq[BType]])
+    }
+  }
+
   implicit def hListFormat[Key <: Symbol, Value, Remaining <: HList](
     implicit
       key: Witness.Aux[Key],
@@ -100,9 +130,9 @@ final object BencodedType {
     val jfh = lazyJfh.value
     val jft = lazyJft.value
 
-    // def encode(hlist: FieldType[Key, Value] :: Remaining) =
-    //   jft.encode(hlist.tail).asJsObject :+
-    //     (key.value.name -> jfh.encode(hlist.head))
+    def encode(hlist: FieldType[Key, Value] :: Remaining) =
+      jft.encode(hlist.tail).asBDict :+
+        BDict(Map(key.value.name -> jfh.encode(hlist.head)))
 
     def decode(value: BType) = {
       val fields = value.asBDict.fields
@@ -121,6 +151,10 @@ final object BencodedType {
       def decode(value: BType) = {
         generic.from(repFormat.value.decode(value))
       }
+
+      def encode(v: A) = {
+        BDict()
+      }
     }
 
   // LabelledGeneric[X], value: BType -> HList -> X
@@ -134,13 +168,13 @@ object BFormat {
   def apply[T](implicit f: Lazy[BFormat[T]]): BFormat[T] = f.value
 }
 
-case class Hola(a: Long, b: Long)
+case class Hola(a: Long, b: Seq[Long])
 
 object X {
   import BFormat._
   val x = BFormat[Hola]
-  val zz = x.decode(BDict(Map("a" -> BNumber(1), "b" -> BNumber(3))))
-  println(zz)
+  val zz: Hola = x.decode(BDict(Map("a" -> BNumber(1), "b" -> BArray(Seq(BNumber(3))))))
+  println(zz.b(0))
 }
 
 class BEncondingException(s: String) extends RuntimeException
