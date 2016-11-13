@@ -2,7 +2,7 @@ name := "aktorrent"
 
 version := "1.0.1"
 
-scalaVersion := "2.11.8"
+scalaVersion := "2.12.0"
 
 libraryDependencies += "org.parboiled" %% "parboiled" % "2.1.3"
 libraryDependencies += "org.typelevel" %% "cats" % "0.7.0"
