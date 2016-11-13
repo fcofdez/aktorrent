@@ -1,16 +1,14 @@
-package aktorrent
+package aktorrent.btype
 
-import scala.util.{Success, Failure}
-
-import org.parboiled2.ParseError
-import org.scalacheck._
+import aktorrent.btype.BType._
 import org.scalacheck.Arbitrary.arbitrary
 import org.scalacheck.Gen._
 import org.scalacheck.Prop.forAll
+import org.scalacheck._
+
+import scala.util.{Failure, Success}
 
 object BencodeSpec extends Properties("Bencoded") {
-
-  import BencodedType._
 
   def serialize(list: List[BType]): String = {
     s"l${list.map(_.toString).mkString}e"
@@ -48,12 +46,12 @@ object BencodeSpec extends Properties("Bencoded") {
   implicit val arbDict: Arbitrary[List[(BString, BType)]] = Arbitrary(genDictList)
 
   property("strings") = forAll { (str: BString) =>
-    val parsedInput = new BencodingParser(str.toString).InputLine.run().get.asInstanceOf[Vector[BString]]
+    val parsedInput = new BParser(str.toString).InputLine.run().get.asInstanceOf[Vector[BString]]
     parsedInput == Vector(str)
   }
 
   property("dictProperties") = forAll { (l: List[(BString, BType)]) =>
-    val parser = new BencodingParser(serialize(l.toMap))
+    val parser = new BParser(serialize(l.toMap))
     val inputMap = l.map((a: Tuple2[BString, BType]) => (a._1.s, a._2)).toMap
     parser.InputLine.run() match {
       case Success(vector) =>
@@ -69,7 +67,7 @@ object BencodeSpec extends Properties("Bencoded") {
   }
 
   property("list") = forAll { (l: List[BType]) =>
-    val parser = new BencodingParser(serialize(l))
+    val parser = new BParser(serialize(l))
     parser.InputLine.run() match {
       case Success(e) =>
         e(0) match {
@@ -84,7 +82,7 @@ object BencodeSpec extends Properties("Bencoded") {
   }
 
   property("longs") = forAll { (l: BNumber) =>
-    val parsedInput = new BencodingParser(l.toString).InputLine.run().get.asInstanceOf[Vector[BNumber]]
+    val parsedInput = new BParser(l.toString).InputLine.run().get.asInstanceOf[Vector[BNumber]]
     parsedInput == Vector(l)
   }
 }
