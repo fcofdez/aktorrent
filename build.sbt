@@ -2,10 +2,22 @@ name := "aktorrent"
 
 version := "1.0.1"
 
-scalaVersion := "2.12.0"
+scalaVersion := "2.11.8"
+
+scalacOptions ++= Seq(
+  "-target:jvm-1.8",
+  "-encoding", "UTF-8",
+  "-unchecked",
+  "-deprecation",
+  "-Xfuture",
+  "-Yno-adapted-args",
+  "-Ywarn-dead-code",
+  "-Ywarn-numeric-widen",
+  "-Ywarn-value-discard",
+  "-Ywarn-unused"
+)
 
 libraryDependencies += "org.parboiled" %% "parboiled" % "2.1.3"
-libraryDependencies += "org.typelevel" %% "cats" % "0.7.0"
 libraryDependencies += "com.chuusai" %% "shapeless" % "2.3.2"
 
 // Test
