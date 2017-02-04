@@ -10,6 +10,18 @@ import scala.collection.generic.CanBuildFrom
 object BFormat {
   def apply[T](implicit f: Lazy[BFormat[T]]): BFormat[T] = f.value
 
+  implicit def genOptionFormat[Z[_], X](implicit
+                                        evidence: Z[X] <:< Option[X],
+                                        ef: BFormat[X]): BFormat[Option[X]] = new BFormat[Option[X]] {
+    def decode(value: BType) = {
+      Some(ef.decode(value))
+    }
+
+    def encode(x: Option[X]) = {
+      x.map(ef.encode).getOrElse(BNone)
+    }
+  }
+
   implicit def genTraversableFormat[T[_], E](
                                               implicit
                                               evidence: T[E] <:< GenTraversable[E], // both of kind *->*

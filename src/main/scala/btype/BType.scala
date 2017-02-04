@@ -20,6 +20,8 @@ object BType {
 
   final case class BArray(a: Seq[BType]) extends BType
 
+  final case object BNone extends BType
+
   final case class BDict(fields: Map[String, BType] = Map()) extends BType {
     override def asBDict: BDict = this
 
