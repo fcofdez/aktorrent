@@ -31,13 +31,16 @@ object BFormat {
     def decode(value: BType) = {
       value match {
         case BArray(ar) =>
-          ar.map(ef.decode).asInstanceOf[T[E]] // To make the compiler happy
+          val col = ar.map(ef.decode)
+          val builder = cbf()
+          builder.++=(col)
+          builder.result()
         case x => deserializationError("Expected GenTraversable[E] as BArray, but got " + x)
       }
     }
 
     def encode(x: T[E]) = {
-      BArray(x.map(ef.encode).asInstanceOf[Seq[BType]])
+      BArray(x.map(ef.encode).toList)
     }
   }
 
