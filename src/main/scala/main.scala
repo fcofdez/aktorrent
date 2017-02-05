@@ -11,6 +11,7 @@ object Test {
     x match {
       case Success(torren) =>
         val t = formatter.decode(torren(0))
+        println(t.announce)
       case Failure(fail) =>
     }
   }

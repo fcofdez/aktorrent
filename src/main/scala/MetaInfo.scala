@@ -17,6 +17,8 @@ case class Info(
   files: List[FileInfo] = List()
 ) {
   require(pieces.length % 20 == 0)
+
+  def pieceLength: Int = this.`piece length`
 }
 
 object MetaInfoReader {
