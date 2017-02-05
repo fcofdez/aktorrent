@@ -14,7 +14,10 @@ object BFormat {
                                         evidence: Z[X] <:< Option[X],
                                         ef: BFormat[X]): BFormat[Option[X]] = new BFormat[Option[X]] {
     def decode(value: BType) = {
-      Some(ef.decode(value))
+      value match {
+        case BNone => None
+        case _ => Some(ef.decode(value))
+      }
     }
 
     def encode(x: Option[X]) = {
@@ -62,7 +65,8 @@ object BFormat {
 
     def decode(value: BType) = {
       val fields = value.asBDict.fields
-      val head = jfh.decode(fields(key.value.name))
+      val dictElement = fields.get(key.value.name).getOrElse(BNone)
+      val head = jfh.decode(dictElement)
       val tail = jft.decode(value)
       field[Key](head) :: tail
     }
@@ -111,6 +115,7 @@ object BFormat {
 
     def decode(value: BType) = value match {
       case BNumber(x) => x
+      case BNone => 0
       case x => deserializationError("Expected Long as BNumber, but got " + x)
     }
   }
