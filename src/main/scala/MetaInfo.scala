@@ -19,6 +19,8 @@ case class Info(
   require(pieces.length % 20 == 0)
 
   def pieceLength: Int = this.`piece length`
+
+  def piecesHash = pieces.grouped(20).toList
 }
 
 object MetaInfoReader {

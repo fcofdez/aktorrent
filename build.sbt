@@ -19,6 +19,13 @@ scalacOptions ++= Seq(
 
 libraryDependencies += "org.parboiled" %% "parboiled" % "2.1.3"
 libraryDependencies += "com.chuusai" %% "shapeless" % "2.3.2"
+libraryDependencies += "io.netty" % "netty-all" % "4.1.11.Final"
+
+libraryDependencies ++= Seq(
+  "com.typesafe.akka" %% "akka-actor" % "2.5.2",
+  "com.typesafe.akka" %% "akka-testkit" % "2.5.2" % Test
+)
+
 
 // Test
 libraryDependencies += "org.scalacheck" %% "scalacheck" % "1.13.0" % "test"
